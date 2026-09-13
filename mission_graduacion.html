@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Misión: Graduación — Vuelo Orbital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    background: #100021;
+    color: #f7f3e6;
+    font-family: 'Press Start 2P', 'Courier New', monospace;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #game {
+    position: fixed;
+    inset: 0;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  /* scanline overlay for retro CRT feel */
+  #scanlines {
+    position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
+    );
+  }
+  .hud {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 10;
+    font-size: 10px;
+    line-height: 2.2;
+    pointer-events: none;
+    text-shadow: 2px 2px 0 #000;
+  }
+  #shields { color: #319aff; letter-spacing: 2px; font-size: 13px; }
+  #altitude { color: #ffca00; }
+  #progress-wrap {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(50%, 320px);
+    height: 16px;
+    border: 3px solid #319aff;
+    z-index: 10;
+    background: #100021;
+  }
+  #progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #319aff;
+    transition: width 0.2s linear;
+  }
+  #progress-bar.full { background: #ffca00; }
+  #progress-label {
+    position: fixed;
+    top: 38px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 7px;
+    color: #319aff;
+    z-index: 10;
+    text-shadow: 2px 2px 0 #000;
+    white-space: nowrap;
+  }
+  #toast {
+    position: fixed;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+    line-height: 2;
+    color: #ff3d3a;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.4s;
+    text-shadow: 2px 2px 0 #000;
+    pointer-events: none;
+    text-align: center;
+  }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: rgba(10,14,26,0.92);
+    z-index: 30;
+    padding: 20px;
+  }
+  .overlay h1 {
+    color: #ffca00;
+    font-size: clamp(16px, 5vw, 26px);
+    margin-bottom: 22px;
+    line-height: 1.8;
+    text-shadow: 3px 3px 0 #7b2021;
+  }
+  .overlay p {
+    font-size: 9px;
+    line-height: 2.4;
+    margin-bottom: 8px;
+    max-width: 460px;
+  }
+  .btn {
+    margin-top: 24px;
+    padding: 16px 34px;
+    font-size: 12px;
+    font-family: 'Press Start 2P', 'Courier New', monospace;
+    border: 3px solid #ff3d3a;
+    background: #210808;
+    color: #ff3d3a;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 4px 4px 0 #000;
+    transition: none;
+  }
+  .btn:active { background: #ff3d3a; color: #100021; transform: translate(2px,2px); box-shadow: 2px 2px 0 #000; }
+  .legend { font-size: 8px; color: #7b799c; margin-top: 16px; line-height: 2.4; }
+  .hidden { display: none !important; }
+</style>
+<base target="_blank">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="scanlines"></div>
+
+<div class="hud">
+  <div id="shields">🛡️🛡️🛡️</div>
+  <div id="altitude">ALT: 0 m</div>
+</div>
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="progress-label">TIERRA → ÓRBITA DE GRADUACIÓN</div>
+<div id="toast"></div>
+
+<div class="overlay" id="start-screen">
+  <h1>🚀 MISIÓN:<br>GRADUACIÓN</h1>
+  <p>Pilota tu cohete desde el salón de clases<br>hasta la órbita de graduación.</p>
+  <p>Esquiva todo lo que la prepa te lanza:<br><b style="color:#ff3d3a">EXÁMENES · MALAS NOTAS · FECHAS LÍMITE<br>SOLICITUDES UNIVERSITARIAS</b></p>
+  <p style="color:#319aff">🖱️ MOUSE / DEDO / FLECHAS</p>
+  <button class="btn" id="btn-start">Despegar</button>
+  <p class="legend">3 ESCUDOS. LLEGA A 10 000 m PARA GRADUARTE.<br>SOBREVIVE. CREO EN TI.</p>
+</div>
+
+<div class="overlay hidden" id="end-screen">
+  <h1 id="end-title">¡LO LOGRASTE!</h1>
+  <p id="end-text"></p>
+  <button class="btn hidden" id="btn-retry">Volar de Nuevo</button>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const shieldsEl = document.getElementById('shields');
+const altitudeEl = document.getElementById('altitude');
+const progressBar = document.getElementById('progress-bar');
+const toast = document.getElementById('toast');
+const startScreen = document.getElementById('start-screen');
+const endScreen = document.getElementById('end-screen');
+const endTitle = document.getElementById('end-title');
+const endText = document.getElementById('end-text');
+const btnRetry = document.getElementById('btn-retry');
+
+let W, H, DPR;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------------- PALETA 16-BIT ---------------- */
+const PAL = {
+  R: '#e63529', RD: '#6b1410', RL: '#ff6d94',
+  W: '#eff3e6', WD: '#9c9a84',
+  G: '#319aff', GD: '#104d63',
+  N: '#4a493a', ND: '#212019',
+  Y: '#ffca00', O: '#ff7900'
+};
+
+/* ---------------- ESTADO ---------------- */
+const GOAL = 10000;
+let running = false, gameOver = false;
+let altitude = 0, speed = 3.2, shields = 3, invincible = 0;
+let rocket = { x: 0, y: 0, tilt: 0 };
+let obstacles = [], stars = [], particles = [];
+let frame = 0, spawnTimer = 0;
+let keys = {};
+
+const OB_TYPES = [
+  { emoji: '📝', label: 'EXAMEN',                color: '#ff3d3a' },
+  { emoji: '📉', label: 'MALAS NOTAS',           color: '#de245a' },
+  { emoji: '⏰', label: 'FECHA LÍMITE',          color: '#ffae00' },
+  { emoji: '📋', label: 'SOLICITUD UNIV.',       color: '#d6a219' },
+  { emoji: '😴', label: 'TRASNOCHAR',            color: '#8c51ff' },
+  { emoji: '📚', label: 'TAREAS',                color: '#0075d6' },
+];
+
+/* estrellas pixeladas (3 capas de parallax) */
+function initStars() {
+  stars = [];
+  for (let i = 0; i < 110; i++) {
+    stars.push({
+      x: Math.floor(Math.random() * W),
+      y: Math.floor(Math.random() * H),
+      s: 2 + Math.floor(Math.random() * 3),
+      layer: Math.floor(Math.random() * 3),
+      tw: Math.floor(Math.random() * 100)
+    });
+  }
+}
+initStars();
+
+/* ---------------- CONTROLES ---------------- */
+function setRocketY(y) { rocket.targetY = Math.max(50, Math.min(H - 60, y)); }
+rocket.targetY = null;
+canvas.addEventListener('mousemove', e => setRocketY(e.clientY));
+canvas.addEventListener('touchstart', e => setRocketY(e.touches[0].clientY), {passive:false});
+canvas.addEventListener('touchmove', e => { e.preventDefault(); setRocketY(e.touches[0].clientY); }, {passive:false});
+window.addEventListener('keydown', e => { keys[e.key] = true; });
+window.addEventListener('keyup',   e => { keys[e.key] = false; });
+
+/* ---------------- COHETE PIXEL ART ---------------- */
+/* mapa de bits 16x25: R rojo, W blanco, G vidrio, N tobera */
+const ROCKET_MAP = [
+  ".......RR.......",
+  "......RRRR......",
+  ".....RRRRRR.....",
+  "....RRRRRRRR....",
+  "...RRRRRRRRRR...",
+  "..RRRRRRRRRRRR..",
+  "..WWWWWWWWWWWW..",
+  "..WWWWWWWWWWWW..",
+  "..WWGGGGGGGGWW..",
+  "..WWGWWWWWWGWW..",
+  "..WWGGGGGGGGWW..",
+  "..WWWWWWWWWWWW..",
+  "..WWWWWWWWWWWW..",
+  "..WWRRRRRRRRWW..",
+  "..WWRRRRRRRRWW..",
+  "..WWWWWWWWWWWW..",
+  "..WWGGGGGGGGWW..",
+  "..WWWWWWWWWWWW..",
+  "..WWWWWWWWWWWW..",
+  ".RRWWWWWWWWWWRr.".replace('r','R'),
+  "RRRWWWWWWWWWWRRR",
+  "RRRWWWWWWWWWWRRR",
+  "RRR..........RRR",
+  "....NNNNNNNN....",
+  "...NNNNNNNNNN..."
+];
+const PIX = 3; // tamaño de cada píxel del sprite
+
+function drawRocket() {
+  ctx.save();
+  ctx.translate(Math.round(rocket.x), Math.round(rocket.y));
+  if (rocket.tilt !== 0) ctx.rotate(Math.round(rocket.tilt * 8) / 8); // rotación a saltos, más retro
+
+  const mapC = { R: PAL.R, W: PAL.W, G: PAL.G, N: PAL.N };
+  const h = ROCKET_MAP.length * PIX, w = 16 * PIX;
+
+  /* llama pixelada (parpadea) */
+  const flameOn = Math.floor(frame / 3) % 2 === 0;
+  const fy = h / 2;
+  ctx.fillStyle = flameOn ? PAL.Y : PAL.O;
+  ctx.fillRect(-9, fy, 18, 6);
+  ctx.fillRect(-6, fy + 6, 12, 6);
+  ctx.fillStyle = flameOn ? PAL.O : PAL.R;
+  ctx.fillRect(-3, fy + 12, 6, 6);
+
+  /* cuerpo */
+  for (let r = 0; r < ROCKET_MAP.length; r++) {
+    const row = ROCKET_MAP[r];
+    for (let c = 0; c < row.length; c++) {
+      const ch = row[c];
+      if (ch === '.') continue;
+      ctx.fillStyle = mapC[ch];
+      ctx.fillRect(c * PIX - w / 2, r * PIX - h / 2, PIX, PIX);
+    }
+  }
+  /* brillo pixelado en el morro */
+  ctx.fillStyle = PAL.RL;
+  ctx.fillRect(-w/2 + 3*PIX, -h/2 + PIX, PIX, 2*PIX);
+
+  /* destello de invencibilidad */
+  if (invincible > 0 && Math.floor(frame / 4) % 2 === 0) {
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = PAL.G;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-w/2 - 6, -h/2 - 6, w + 12, h + 12);
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+/* ---------------- OBSTÁCULOS ---------------- */
+function spawnObstacle() {
+  const t = OB_TYPES[Math.floor(Math.random() * OB_TYPES.length)];
+  const size = 52 + Math.floor(Math.random() * 3) * 8;
+  obstacles.push({
+    x: W + 90,
+    y: 70 + Math.random() * (H - 160),
+    vx: -(speed + Math.random() * 1.5),
+    vy: (Math.random() - 0.5) * 0.8,
+    size, type: t,
+    wob: Math.random() * Math.PI * 2
+  });
+}
+
+function drawObstacle(o) {
+  ctx.save();
+  const bob = Math.round(Math.sin(frame * 0.05 + o.wob) * 4);
+  const x = Math.round(o.x - o.size / 2);
+  const y = Math.round(o.y - o.size / 2 + bob);
+  const s = Math.round(o.size);
+
+  /* sombra dura pixelada */
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x + 5, y + 5, s, s);
+  /* tarjeta */
+  ctx.fillStyle = '#191421';
+  ctx.fillRect(x, y, s, s);
+  ctx.strokeStyle = o.type.color;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(x + 2, y + 2, s - 4, s - 4);
+  /* esquinas decorativas */
+  ctx.fillStyle = o.type.color;
+  ctx.fillRect(x - 2, y - 2, 8, 8);
+  ctx.fillRect(x + s - 6, y + s - 6, 8, 8);
+
+  /* emoji + etiqueta */
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = Math.round(s * 0.4) + 'px serif';
+  ctx.fillText(o.type.emoji, x + s / 2, y + s * 0.38);
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.fillStyle = o.type.color;
+  wrapLabel(o.type.label, x + s / 2, y + s * 0.74, s - 10);
+  ctx.restore();
+}
+
+function wrapLabel(text, cx, cy, maxW) {
+  const words = text.split(' ');
+  let lines = [''], li = 0;
+  for (const wd of words) {
+    const test = lines[li] ? lines[li] + ' ' + wd : wd;
+    if (ctx.measureText(test).width > maxW && lines[li]) { li++; lines[li] = wd; }
+    else lines[li] = test;
+  }
+  const lh = 10;
+  lines.forEach((ln, i) => ctx.fillText(ln, cx, cy + (i - (lines.length - 1) / 2) * lh));
+}
+
+/* ---------------- PARTÍCULAS (píxeles cuadrados) ---------------- */
+function burst(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = 1 + Math.random() * 4;
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+      life: 1, decay: 0.015 + Math.random() * 0.02,
+      color, s: 3 + Math.floor(Math.random() * 3) * 2
+    });
+  }
+}
+
+/* ---------------- FONDO ---------------- */
+/* cielo plano por franjas (sin degradados, a saltos de color) */
+function drawBackground() {
+  const p = Math.min(altitude / GOAL, 1);
+  const steps = [
+    { at: 0.00, top: '#100021', bot: '#3a105a' },
+    { at: 0.35, top: '#19183a', bot: '#4a1c73' },
+    { at: 0.70, top: '#19205a', bot: '#6b2d9c' },
+    { at: 1.00, top: '#292863', bot: '#9c51c5' },
+  ];
+  let cur = steps[0];
+  for (const st of steps) if (p >= st.at) cur = st;
+  ctx.fillStyle = cur.top;
+  ctx.fillRect(0, 0, W, H * 0.6);
+  ctx.fillStyle = cur.bot;
+  ctx.fillRect(0, H * 0.6, W, H * 0.4);
+
+  /* sol de graduación pixelado al final */
+  if (p > 0.8) {
+    drawPixelCircle(W * 0.78, H * 0.16, 46, PAL.Y);
+    drawPixelCircle(W * 0.78, H * 0.16, 34, '#ffdf63');
+  }
+
+  /* estrellas cuadradas */
+  for (const s of stars) {
+    s.tw = (s.tw + 1) % 120;
+    const px = (((s.x - frame * (0.15 + s.layer * 0.25) - speed * s.layer) % W) + W) % W;
+    ctx.globalAlpha = s.tw < 60 ? 0.35 + s.layer * 0.2 : 1;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(Math.round(px), s.y, s.s, s.s);
+  }
+  ctx.globalAlpha = 1;
+
+  /* horizonte terrestre al inicio */
+  if (p < 0.25) {
+    ctx.fillStyle = '#10206b';
+    ctx.fillRect(0, H - 26, W, 26);
+    ctx.fillStyle = '#316dde';
+    for (let x = 0; x < W; x += 24)
+      ctx.fillRect(x, H - 26, 12, 4);
+  }
+}
+
+/* círculo hecho de franjas de rectángulos = look pixelado */
+function drawPixelCircle(cx, cy, r, color) {
+  ctx.fillStyle = color;
+  const step = 6;
+  for (let dy = -r; dy <= r; dy += step) {
+    const half = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy)) / step) * step;
+    ctx.fillRect(Math.round(cx - half), Math.round(cy + dy), half * 2, step);
+  }
+}
+
+/* ---------------- BUCLE DE JUEGO ---------------- */
+function update() {
+  frame++;
+  const target = rocket.targetY !== null ? rocket.targetY : rocket.y;
+  let dy = (target - rocket.y) * 0.12;
+  if (keys['ArrowUp']   || keys['w'] || keys['W']) dy -= 6;
+  if (keys['ArrowDown'] || keys['s'] || keys['S']) dy += 6;
+  rocket.tilt = Math.max(-0.3, Math.min(0.3, dy * 0.02));
+  rocket.y += dy;
+  rocket.y = Math.max(50, Math.min(H - 60, rocket.y));
+  rocket.x = Math.min(W * 0.3, 140);
+
+  if (running && !gameOver) {
+    altitude += speed * 2.2;
+    speed = Math.min(10, speed + 0.0012);
+
+    spawnTimer--;
+    const interval = Math.max(26, 75 - speed * 5);
+    if (spawnTimer <= 0) {
+      spawnObstacle();
+      if (speed > 6 && Math.random() < 0.4) spawnObstacle();
+      spawnTimer = interval;
+    }
+
+    const rr = 26;
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      const o = obstacles[i];
+      o.x += o.vx; o.y += o.vy;
+      if (o.x < -110) { obstacles.splice(i, 1); continue; }
+      const dx = o.x - rocket.x, dyy = o.y - rocket.y;
+      const hitR = rr + o.size * 0.42;
+      if (dx * dx + dyy * dyy < hitR * hitR && invincible <= 0) {
+        obstacles.splice(i, 1);
+        shields--;
+        invincible = 90;
+        burst(rocket.x, rocket.y, PAL.R, 26);
+        burst(o.x, o.y, o.type.color, 18);
+        updateShields();
+        showToast(shields > 0 ? '💥 ¡' + o.type.label + '!<br>¡ESCUDO PERDIDO!' : '💥 ¡IMPACTO CRÍTICO!');
+        if (navigator.vibrate) navigator.vibrate([150, 60, 150]);
+        if (shields <= 0) endGame(false);
+      }
+    }
+    if (invincible > 0) invincible--;
+
+    /* estela de escape */
+    if (frame % 3 === 0) {
+      particles.push({
+        x: rocket.x - 8, y: rocket.y + 46,
+        vx: -1 - speed * 0.4, vy: (Math.random() - 0.5) * 1.2,
+        life: 0.7, decay: 0.03, color: PAL.O, s: 4
+      });
+    }
+    if (altitude >= GOAL) endGame(true);
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  altitudeEl.textContent = 'ALT: ' + Math.floor(altitude).toLocaleString('es-MX') + ' m';
+  const pct = Math.min(100, altitude / GOAL * 100);
+  progressBar.style.width = pct + '%';
+  progressBar.classList.toggle('full', pct >= 100);
+}
+
+function draw() {
+  drawBackground();
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    const s = Math.max(2, Math.round(p.s * p.life));
+    ctx.fillRect(Math.round(p.x), Math.round(p.y), s, s);
+  }
+  ctx.globalAlpha = 1;
+  for (const o of obstacles) drawObstacle(o);
+  drawRocket();
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ---------------- UI ---------------- */
+function updateShields() {
+  shieldsEl.textContent = '🛡️'.repeat(Math.max(0, shields)) || '—';
+  shieldsEl.style.color = shields === 1 ? '#ff3d3a' : '#319aff';
+}
+
+function showToast(html) {
+  toast.innerHTML = html;
+  toast.style.opacity = '1';
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(() => toast.style.opacity = '0', 1200);
+}
+
+function endGame(win) {
+  gameOver = true;
+  setTimeout(() => {
+    endScreen.classList.remove('hidden');
+    if (win) {
+      endTitle.textContent = '🎓 ¡LO LOGRASTE!';
+      endTitle.style.color = '#ffca00';
+      endText.innerHTML = 'Pasaste cada examen, cada fecha límite,<br>cada mala nota que intentó derribarte.<br><br>La prepa era gravedad — siempre estuvo<br>destinada a sostenerte hasta que estuvieras listo.<br><br>Ahora ve a conquistar el espacio.<br><br><span style="color:#319aff; font-size:11px;">— Orgulloso de ti</span>';
+      btnRetry.classList.remove('hidden');
+      const cols = [PAL.Y, PAL.G, PAL.R];
+      for (let i = 0; i < 5; i++)
+        setTimeout(() => burst(Math.random() * W, Math.random() * H * 0.5, cols[i % 3], 30), i * 250);
+    } else {
+      endTitle.textContent = '💥 TE ESTRELLASTE';
+      endTitle.style.color = '#de245a';
+      endText.innerHTML = 'El semestre te ganó esta vez.<br><br>Pero los cohetes están hechos<br>para relanzarse.<br><span style="color:#319aff">Todo astronauta reprobó<br>algunos exámenes primero.</span>';
+      btnRetry.classList.remove('hidden');
+    }
+  }, win ? 600 : 900);
+}
+
+function reset() {
+  altitude = 0; speed = 3.2; shields = 3; invincible = 0;
+  obstacles = []; particles = [];
+  rocket.y = H / 2; rocket.targetY = null; rocket.tilt = 0;
+  running = true; gameOver = false;
+  updateShields();
+  endScreen.classList.add('hidden');
+  startScreen.classList.add('hidden');
+  progressBar.classList.remove('full');
+}
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  reset();
+  if (navigator.vibrate) navigator.vibrate(100);
+});
+btnRetry.addEventListener('click', reset);
+
+/* init */
+rocket.x = Math.min(W * 0.3, 140);
+rocket.y = H / 2;
+updateShields();
+loop();
+</script>
+</body>
+</html>
