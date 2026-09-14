@@ -96,11 +96,20 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     text-align: center;
-    background: rgba(10,14,26,0.92);
+    background: rgba(16,0,33,0.92);
     z-index: 30;
     padding: 20px;
+  }
+  .overlay-inner {
+    margin: auto 0;
+    max-width: 480px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   .overlay h1 {
     color: #ffca00;
@@ -115,20 +124,61 @@
     margin-bottom: 8px;
     max-width: 460px;
   }
+  .end-text {
+    font-size: 9px;
+    line-height: 2.4;
+    margin-bottom: 8px;
+    max-width: 460px;
+  }
+  .end-text.story {
+    text-align: left;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    max-width: 480px;
+  }
+  .end-text.story p { margin-bottom: 16px; }
+  .end-text.story p:last-child { margin-bottom: 0; }
   .btn {
+    position: relative;
     margin-top: 24px;
-    padding: 16px 34px;
+    padding: 18px 38px;
     font-size: 12px;
     font-family: 'Press Start 2P', 'Courier New', monospace;
-    border: 3px solid #ff3d3a;
-    background: #210808;
-    color: #ff3d3a;
+    color: #4a2600;
+    background: #ffca00;
+    border: 4px solid #210808;
     cursor: pointer;
     text-transform: uppercase;
-    box-shadow: 4px 4px 0 #000;
+    text-shadow: 1px 1px 0 #ffe580;
+    clip-path: polygon(
+      10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px),
+      calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px
+    );
+    box-shadow:
+      inset 5px 5px 0 #ffe580,
+      inset -5px -5px 0 #b37a00,
+      6px 6px 0 #000;
     transition: none;
   }
-  .btn:active { background: #ff3d3a; color: #100021; transform: translate(2px,2px); box-shadow: 2px 2px 0 #000; }
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 9px; left: 9px;
+    width: 8px; height: 8px;
+    background: #fff6cc;
+    box-shadow: 5px 0 0 #fff6cc, 0 5px 0 #fff6cc;
+    opacity: 0.85;
+  }
+  .btn:active {
+    transform: translate(6px, 6px);
+    background: #e6b800;
+    box-shadow:
+      inset -5px -5px 0 #b37a00,
+      inset 5px 5px 0 #8a5c00,
+      0 0 0 #000;
+  }
+  .btn:active::before { opacity: 0.4; }
   .legend { font-size: 8px; color: #7b799c; margin-top: 16px; line-height: 2.4; }
   .hidden { display: none !important; }
 </style>
@@ -147,18 +197,22 @@
 <div id="toast"></div>
 
 <div class="overlay" id="start-screen">
-  <h1>MISIÓN:<br>GRADUACIÓN</h1>
-  <p>Guíe el cohete<br>hasta la órbita de graduación.</p>
-  <p>Esquive todo lo que el colegio le lanza:<br><b style="color:#ff3d3a">EXÁMENES · MALAS NOTAS · FECHAS LÍMITE<br>SOLICITUDES UNIVERSITARIAS</b></p>
-  <p style="color:#319aff">🖱️ MOUSE / DEDO / FLECHAS (tal vez no)</p>
-  <button class="btn" id="btn-start">Despegar</button>
-  <p class="legend">3 ESCUDOS. LLEGA A 10 000 m PARA GRADUARTE. </p>
+  <div class="overlay-inner">
+    <h1>MISIÓN:<br>GRADUACIÓN</h1>
+    <p>Guíe el cohete<br>hasta la órbita de graduación.</p>
+    <p>Esquive todo lo que el colegio le lanza:<br><b style="color:#ff3d3a">EXÁMENES · MALAS NOTAS · FECHAS LÍMITE<br>SOLICITUDES UNIVERSITARIAS</b></p>
+    <p style="color:#319aff">🖱️ MOUSE / DEDO / FLECHAS (tal vez no)</p>
+    <button class="btn" id="btn-start">Despegar</button>
+    <p class="legend">3 ESCUDOS. LLEGA A 10 000 m PARA GRADUARTE. </p>
+  </div>
 </div>
 
 <div class="overlay hidden" id="end-screen">
-  <h1 id="end-title">¡LO LOGRASTE!</h1>
-  <p id="end-text"></p>
-  <button class="btn hidden" id="btn-retry">Volar de Nuevo</button>
+  <div class="overlay-inner">
+    <h1 id="end-title">¡LO LOGRASTE!</h1>
+    <div id="end-text" class="end-text"></div>
+    <button class="btn hidden" id="btn-retry">Volar de Nuevo</button>
+  </div>
 </div>
 
 <script>
@@ -569,8 +623,7 @@ function endGame(win) {
       endTitle.style.color = '#ffca00';
       endText.className = 'end-text story';
       endText.innerHTML = [
-       'La vida solo puede ser comprendida mirando hacia atrás, pero debe ser vivida hacia adelante'
-       '-Søren Kierkegaard'
+       '"La vida solo puede ser comprendida mirando hacia atrás, pero debe ser vivida hacia adelante"<br><span style="color:#7b799c; font-size:10px;">— Søren Kierkegaard</span>',
         '¡Felicidades por ya casi terminar el colegio! Está próximo a entrar en una etapa distinta, una que pueda que abra un mundo que desde donde está ahora no pueda anticipar por completo.',
         'Esa etapa traerá consigo mucha libertad, pero la libertad puede resultar extraña. Siempre habrá voces que intenten decirle cómo debería ser una vida bien vivida, tratando de moldear aquello que creen que debería desear. Parte de convertirse en un "Yo" pleno consiste en aprender a distinguir esas expectativas de aquello que realmente se desea para con su persona. Nadie más puede vivir su vida por usted, y nadie más puede darle un significado que, en última instancia, sea suficiente para usted.',
         'Nos encontramos a nosotros mismos a través del mundo y de las personas que pasan a formar parte de él. Las relaciones que construimos pueden transformar aquello que percibimos, lo que valoramos e incluso lo que somos capaces de imaginar. Es decir, la vida se va descubriendo mientras se vive, no es algo que podemos poseer o comprender plenamente de antemano.',
@@ -584,6 +637,7 @@ function endGame(win) {
     } else {
       endTitle.textContent = '💥 RIP';
       endTitle.style.color = '#de245a';
+      endText.className = 'end-text';
       endText.innerHTML = '"Atreverse es perder el equilibrio momentáneamente.<br> No atreverse es perderse a uno mismo"<br> -Søren Kierkegaard <br><br>El colegio le ganó esta vez.<br>Pero este cohete está diseñado<br>para relanzarse.<br><span style="color:#319aff">Todo astronauta reprobó<br>algunos exámenes primero.</span>';
       btnRetry.classList.remove('hidden');
     }
