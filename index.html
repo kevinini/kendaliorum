@@ -568,7 +568,7 @@ function endGame(win) {
     if (win) {
       endTitle.textContent = '🎓 ¡LO LOGRASTE!';
       endTitle.style.color = '#ffca00';
-      endText.innerHTML = 'Pasaste cada examen, cada fecha límite,<br>cada mala nota que intentó derribarte.<br><br>El colegio era gravedad. Siempre estuvo<br>destinado a sostenerlo hasta que estuviera listo.<br><br>Ahora ve a conquistar el espacio.<br><br><span style="color:#319aff; font-size:11px;">— Orgulloso de ti</span>';
+      endText.innerHTML = '"La vida solo puede ser comprendida mirando hacia atrás, pero debe ser vivida hacia adelante"<br> -Søren Kierkegaard <br><br><br><span style="color:#319aff; font-size:11px;">— Orgulloso de ti</span>';
       btnRetry.classList.remove('hidden');
       const cols = [PAL.Y, PAL.G, PAL.R];
       for (let i = 0; i < 5; i++)
@@ -576,7 +576,7 @@ function endGame(win) {
     } else {
       endTitle.textContent = '💥 TE ESTRELLASTE';
       endTitle.style.color = '#de245a';
-      endText.innerHTML = '"Atreverse es perder el equilibrio momentáneamente.<br> No atreverse es perderse a uno mismo"<br> -Søren Kierkegaard <br>El colegio le ganó esta vez.<br><br>Pero este cohete está diseñado<br>para relanzarse.<br><span style="color:#319aff">Todo astronauta reprobó<br>algunos exámenes primero.</span>';
+      endText.innerHTML = '"Atreverse es perder el equilibrio momentáneamente.<br> No atreverse es perderse a uno mismo"<br> -Søren Kierkegaard <br><br>El colegio le ganó esta vez.<br>Pero este cohete está diseñado<br>para relanzarse.<br><span style="color:#319aff">Todo astronauta reprobó<br>algunos exámenes primero.</span>';
       btnRetry.classList.remove('hidden');
     }
   }, win ? 600 : 900);
