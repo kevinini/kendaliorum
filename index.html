@@ -147,7 +147,7 @@
 <div id="toast"></div>
 
 <div class="overlay" id="start-screen">
-  <h1>🚀 MISIÓN:<br>GRADUACIÓN</h1>
+  <h1>MISIÓN:<br>GRADUACIÓN</h1>
   <p>Guíe el cohete<br>hasta la órbita de graduación.</p>
   <p>Esquive todo lo que el colegio le lanza:<br><b style="color:#ff3d3a">EXÁMENES · MALAS NOTAS · FECHAS LÍMITE<br>SOLICITUDES UNIVERSITARIAS</b></p>
   <p style="color:#319aff">🖱️ MOUSE / DEDO / FLECHAS (tal vez no)</p>
@@ -207,7 +207,7 @@ let keys = {};
 const OB_TYPES = [
   { emoji: '📝', label: 'EXAMEN',                color: '#ff3d3a' },
   { emoji: '📉', label: 'MALAS NOTAS',           color: '#de245a' },
-  { emoji: '⏰', label: 'FECHA LÍMITE',          color: '#ffae00' },
+  { emoji: '📱', label: 'TIK TOK',               color: '#ffae00' },
   { emoji: '📋', label: 'SOLICITUD UNIV.',       color: '#d6a219' },
   { emoji: '😴', label: 'TRASNOCHAR',            color: '#8c51ff' },
   { emoji: '📚', label: 'TAREAS',                color: '#0075d6' },
@@ -381,7 +381,6 @@ function burst(x, y, color, n) {
 }
 
 /* ---------------- FONDO ---------------- */
-/* el borde de la atmósfera: franjas planas (sin degradados), sin negro dominante */
 function pickStep(p, steps) {
   let cur = steps[0].c;
   for (const st of steps) if (p >= st.at) cur = st.c;
@@ -566,15 +565,24 @@ function endGame(win) {
   setTimeout(() => {
     endScreen.classList.remove('hidden');
     if (win) {
-      endTitle.textContent = '🎓 ¡LO LOGRASTE!';
+      endTitle.textContent = '¡LO LOGRASTE!';
       endTitle.style.color = '#ffca00';
-      endText.innerHTML = '"La vida solo puede ser comprendida mirando hacia atrás, pero debe ser vivida hacia adelante"<br> -Søren Kierkegaard <br><br><br><span style="color:#319aff; font-size:11px;">— Orgulloso de ti</span>';
+      endText.className = 'end-text story';
+      endText.innerHTML = [
+       'La vida solo puede ser comprendida mirando hacia atrás, pero debe ser vivida hacia adelante'
+       '-Søren Kierkegaard'
+        '¡Felicidades por ya casi terminar el colegio! Está próximo a entrar en una etapa distinta, una que pueda que abra un mundo que desde donde está ahora no pueda anticipar por completo.',
+        'Esa etapa traerá consigo mucha libertad, pero la libertad puede resultar extraña. Siempre habrá voces que intenten decirle cómo debería ser una vida bien vivida, tratando de moldear aquello que creen que debería desear. Parte de convertirse en un "Yo" pleno consiste en aprender a distinguir esas expectativas de aquello que realmente se desea para con su persona. Nadie más puede vivir su vida por usted, y nadie más puede darle un significado que, en última instancia, sea suficiente para usted.',
+        'Nos encontramos a nosotros mismos a través del mundo y de las personas que pasan a formar parte de él. Las relaciones que construimos pueden transformar aquello que percibimos, lo que valoramos e incluso lo que somos capaces de imaginar. Es decir, la vida se va descubriendo mientras se vive, no es algo que podemos poseer o comprender plenamente de antemano.',
+        'Así que, al seguir adelante, no sienta que deber que saber exactamente a donde habrá de acabar ese nuevo capítulo. No existe una versión terminada de su persona esperando en algún lugar del futuro para que finalmente llegue a ella. Va a encontrarse con el mundo, tomar decisiones, cambiar de opinión y, poco a poco, reconocerse en la vida que hayas ido construyendo.',
+        'Algún día podrá mirar hacia atrás y comprender lo que este momento significaba. Por ahora, solo tiene que vivir hacia adelante.'
+      ].map(par => '<p>' + par + '</p>').join('');
       btnRetry.classList.remove('hidden');
       const cols = [PAL.Y, PAL.G, PAL.R];
       for (let i = 0; i < 5; i++)
         setTimeout(() => burst(Math.random() * W, Math.random() * H * 0.5, cols[i % 3], 30), i * 250);
     } else {
-      endTitle.textContent = '💥 TE ESTRELLASTE';
+      endTitle.textContent = '💥 RIP';
       endTitle.style.color = '#de245a';
       endText.innerHTML = '"Atreverse es perder el equilibrio momentáneamente.<br> No atreverse es perderse a uno mismo"<br> -Søren Kierkegaard <br><br>El colegio le ganó esta vez.<br>Pero este cohete está diseñado<br>para relanzarse.<br><span style="color:#319aff">Todo astronauta reprobó<br>algunos exámenes primero.</span>';
       btnRetry.classList.remove('hidden');
