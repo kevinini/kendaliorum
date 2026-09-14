@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Misión: Graduación — Vuelo Orbital</title>
+<title>Misión: Graduación</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
@@ -148,11 +148,11 @@
 
 <div class="overlay" id="start-screen">
   <h1>🚀 MISIÓN:<br>GRADUACIÓN</h1>
-  <p>Pilota tu cohete desde el salón de clases<br>hasta la órbita de graduación.</p>
-  <p>Esquiva todo lo que la prepa te lanza:<br><b style="color:#ff3d3a">EXÁMENES · MALAS NOTAS · FECHAS LÍMITE<br>SOLICITUDES UNIVERSITARIAS</b></p>
-  <p style="color:#319aff">🖱️ MOUSE / DEDO / FLECHAS</p>
+  <p>Guíe el cohete<br>hasta la órbita de graduación.</p>
+  <p>Esquive todo lo que el colegio le lanza:<br><b style="color:#ff3d3a">EXÁMENES · MALAS NOTAS · FECHAS LÍMITE<br>SOLICITUDES UNIVERSITARIAS</b></p>
+  <p style="color:#319aff">🖱️ MOUSE / DEDO / FLECHAS (tal vez no)</p>
   <button class="btn" id="btn-start">Despegar</button>
-  <p class="legend">3 ESCUDOS. LLEGA A 10 000 m PARA GRADUARTE.<br>SOBREVIVE. CREO EN TI.</p>
+  <p class="legend">3 ESCUDOS. LLEGA A 10 000 m PARA GRADUARTE. </p>
 </div>
 
 <div class="overlay hidden" id="end-screen">
@@ -381,31 +381,59 @@ function burst(x, y, color, n) {
 }
 
 /* ---------------- FONDO ---------------- */
-/* cielo plano por franjas (sin degradados, a saltos de color) */
+/* el borde de la atmósfera: franjas planas (sin degradados), sin negro dominante */
+function pickStep(p, steps) {
+  let cur = steps[0].c;
+  for (const st of steps) if (p >= st.at) cur = st.c;
+  return cur;
+}
+
 function drawBackground() {
   const p = Math.min(altitude / GOAL, 1);
-  const steps = [
-    { at: 0.00, top: '#100021', bot: '#3a105a' },
-    { at: 0.35, top: '#19183a', bot: '#4a1c73' },
-    { at: 0.70, top: '#19205a', bot: '#6b2d9c' },
-    { at: 1.00, top: '#292863', bot: '#9c51c5' },
-  ];
-  let cur = steps[0];
-  for (const st of steps) if (p >= st.at) cur = st;
-  ctx.fillStyle = cur.top;
-  ctx.fillRect(0, 0, W, H * 0.6);
-  ctx.fillStyle = cur.bot;
-  ctx.fillRect(0, H * 0.6, W, H * 0.4);
 
-  /* sol de graduación pixelado al final */
-  if (p > 0.8) {
-    drawPixelCircle(W * 0.78, H * 0.16, 46, PAL.Y);
-    drawPixelCircle(W * 0.78, H * 0.16, 34, '#ffdf63');
+  /* el espacio negro crece con la altitud; la franja de aire se reduce */
+  const spaceH = H * (0.06 + p * 0.66);
+  const rimH   = Math.max(8, H * (0.10 - p * 0.05));
+  const skyH   = Math.max(0, H - spaceH - rimH);
+
+  const spaceColor = pickStep(p, [
+    { at: 0.00, c: '#0075d6' },
+    { at: 0.30, c: '#19205a' },
+    { at: 0.65, c: '#100021' },
+    { at: 1.00, c: '#000000' },
+  ]);
+  const skyColor = pickStep(p, [
+    { at: 0.00, c: '#319aff' },
+    { at: 0.30, c: '#0075d6' },
+    { at: 0.65, c: '#19205a' },
+    { at: 1.00, c: '#100021' },
+  ]);
+  const rimColor = pickStep(p, [
+    { at: 0.00, c: '#7bc6ff' },
+    { at: 0.35, c: '#ade3ff' },
+    { at: 0.65, c: '#ff6d94' },
+    { at: 1.00, c: '#ffca00' },
+  ]);
+
+  ctx.fillStyle = spaceColor;
+  ctx.fillRect(0, 0, W, spaceH);
+  ctx.fillStyle = rimColor;
+  ctx.fillRect(0, spaceH, W, rimH);
+  if (skyH > 0) {
+    ctx.fillStyle = skyColor;
+    ctx.fillRect(0, spaceH + rimH, W, skyH);
   }
 
-  /* estrellas cuadradas */
+  /* sol de graduación pixelado al final, ya en el espacio */
+  if (p > 0.8) {
+    drawPixelCircle(W * 0.78, spaceH * 0.4, 46, PAL.Y);
+    drawPixelCircle(W * 0.78, spaceH * 0.4, 34, '#ffdf63');
+  }
+
+  /* estrellas cuadradas, solo visibles en la franja de espacio */
   for (const s of stars) {
     s.tw = (s.tw + 1) % 120;
+    if (s.y > spaceH + rimH * 0.4) continue;
     const px = (((s.x - frame * (0.15 + s.layer * 0.25) - speed * s.layer) % W) + W) % W;
     ctx.globalAlpha = s.tw < 60 ? 0.35 + s.layer * 0.2 : 1;
     ctx.fillStyle = '#fff';
@@ -540,7 +568,7 @@ function endGame(win) {
     if (win) {
       endTitle.textContent = '🎓 ¡LO LOGRASTE!';
       endTitle.style.color = '#ffca00';
-      endText.innerHTML = 'Pasaste cada examen, cada fecha límite,<br>cada mala nota que intentó derribarte.<br><br>La prepa era gravedad — siempre estuvo<br>destinada a sostenerte hasta que estuvieras listo.<br><br>Ahora ve a conquistar el espacio.<br><br><span style="color:#319aff; font-size:11px;">— Orgulloso de ti</span>';
+      endText.innerHTML = 'Pasaste cada examen, cada fecha límite,<br>cada mala nota que intentó derribarte.<br><br>El colegio era gravedad. Siempre estuvo<br>destinado a sostenerlo hasta que estuviera listo.<br><br>Ahora ve a conquistar el espacio.<br><br><span style="color:#319aff; font-size:11px;">— Orgulloso de ti</span>';
       btnRetry.classList.remove('hidden');
       const cols = [PAL.Y, PAL.G, PAL.R];
       for (let i = 0; i < 5; i++)
@@ -548,7 +576,7 @@ function endGame(win) {
     } else {
       endTitle.textContent = '💥 TE ESTRELLASTE';
       endTitle.style.color = '#de245a';
-      endText.innerHTML = 'El semestre te ganó esta vez.<br><br>Pero los cohetes están hechos<br>para relanzarse.<br><span style="color:#319aff">Todo astronauta reprobó<br>algunos exámenes primero.</span>';
+      endText.innerHTML = '"Atreverse es perder el equilibrio momentáneamente.<br> No atreverse es perderse a uno mismo"<br> -Søren Kierkegaard <br>El colegio le ganó esta vez.<br><br>Pero este cohete está diseñado<br>para relanzarse.<br><span style="color:#319aff">Todo astronauta reprobó<br>algunos exámenes primero.</span>';
       btnRetry.classList.remove('hidden');
     }
   }, win ? 600 : 900);
