@@ -133,7 +133,7 @@
   .end-text.story {
     text-align: left;
     font-family: 'Courier New', monospace;
-    font-size: 12px;
+    font-size: 16px;
     line-height: 1.8;
     max-width: 480px;
   }
@@ -638,7 +638,7 @@ function endGame(win) {
       endTitle.textContent = '💥 RIP';
       endTitle.style.color = '#de245a';
       endText.className = 'end-text';
-      endText.innerHTML = '"Atreverse es perder el equilibrio momentáneamente.<br> No atreverse es perderse a uno mismo"<br> -Søren Kierkegaard <br><br>El colegio le ganó esta vez.<br>Pero este cohete está diseñado<br>para relanzarse.</span>';
+      endText.innerHTML = '"Atreverse es perder el equilibrio momentáneamente.<br> No atreverse es perderse a uno mismo"<br> -Søren Kierkegaard <br><br>El colegio ganó esta vez.<br>Pero este cohete está diseñado<br>para relanzarse.</span>';
       btnRetry.classList.remove('hidden');
     }
   }, win ? 600 : 900);
